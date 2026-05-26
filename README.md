@@ -153,24 +153,9 @@ Only the configurations that do **not** depend on the ISA extension (`SB`, `DB`,
 
 ## Citing this work
 
-```bibtex
-@article{dynn_rv_soc_2026,
-  title  = {Towards enabling RISC-V based hardware platform for Dynamic Neural Network Inference on Edge devices},
-  author = {Kumar M, Ajay and Shanker, Shreejith and John, Deepu},
-  journal= {IEEE Transactions on Circuits and Systems I: Regular Papers},
-  year   = {2026},
-  note   = {Under review}
-}
-```
 
 ---
 
 ## License
 
-Apache-2.0 for source we authored. RTL files have an SPDX header. Generated C files inherit the TVM Apache-2.0 license. Model weights are released under CC-BY-4.0.
 
-The Synopsys `trv32p3` core, ASIP Designer toolchain, and `chess` compiler are property of Synopsys, Inc., and are **not** covered by this repository's license.
-
-## Acknowledgement
-
-Funded by Taighde Éireann – Research Ireland through the Centre for Research Training in Machine Learning (18/CRT/6183).
