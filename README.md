@@ -1,6 +1,4 @@
-# dynn-rv-soc
-
-Companion artefacts for *"Towards enabling RISC-V based hardware platform for Dynamic Neural Network Inference on Edge devices"* (IEEE TCAS-I, under review).
+# DyNN-RV-SoC
 
 A dual-core RISC-V SoC with a lightweight INT8 dot-product accelerator and an end-to-end model-to-FPGA pipeline for **early-exit (dynamic) convolutional neural networks**. Prototyped on AMD ZCU102.
 
@@ -8,7 +6,7 @@ A dual-core RISC-V SoC with a lightweight INT8 dot-product accelerator and an en
 
 ## What is, and is not, in this repository
 
-**This repository is a partial release.** The RISC-V cores in the published SoC are instances of Synopsys `trv32p3` (ASIP Designer); the corresponding RTL, microarchitecture description, and toolchain (`chess` compiler) are covered by NDA and **cannot be redistributed**. The release below contains everything that does not depend on that IP.
+**This repository is a partial release.** The RISC-V cores in the published SoC are instances of Synopsys `trv32p3` (ASIP Designer); the corresponding RTL, microarchitecture description, and toolchain (`chess` compiler) are **Synopsys property**.
 
 ### Included
 
