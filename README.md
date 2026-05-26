@@ -10,48 +10,32 @@ A dual-core RISC-V SoC with a lightweight INT8 dot-product accelerator and an en
 
 ### Included
 
-- `pipeline/` — Python toolflow: backbone preparation, exit-head insertion, training, INT8 post-training quantization (TFLite), and TVM-based bare-metal C generation.
-- `placement/` — Reference implementation of the hardware-aware exit-placement procedure (Algorithm 1 in the paper).
+- `software/` — Python toolflow: backbone preparation, exit-head insertion, training, INT8 post-training quantization (TFLite), and TVM-based bare-metal C generation.
 - `accel_codegen/` — Post-generation rewriting pass that converts TVM-emitted C for pointwise / dense layers into accelerator-tiled intrinsics.
 - `rtl/ahbconv/` — Synthesizable Verilog for the AHBconv dot-product accelerator (AHB-Lite slave, dual-clock scratchpad, INT8 SIMD MAC, per-channel requantization).
-- `rtl/glue/` — AHB-Lite bus fabric, address decoder, AHB-Lite ↔ core bus bridge interface, clock-gating controller, reset controller.
-- `rtl/peripherals/` — AHB-UART, profiling timer, dual-port BRAM wrapper.
-- `fpga/` — Vivado constraints, XDC, and a build script that targets ZCU102. The script expects two opaque core blackboxes (see *Reproducing the SoC* below).
+- `rtl/peripherals/` — AHB-UART, AHB-timer, dual-port BRAM wrapper.
+- `fpga/` — Vivado constraints, and a build instructions for ZCU102.
 - `models/` — Generated INT8 multi-exit MobileNetV1 / V2 / V3-Small networks (Network A and Network B), with generated C sources for each.
 - `scripts/` — Host-side measurement harness (UART protocol, image streaming, latency capture).
 - `docs/` — Architectural diagrams, register map, AHB transactions, mailbox layout.
 
-### Excluded (NDA)
+### Excluded
 
 - Synopsys ASIP Designer `trv32p3` core RTL, microarchitecture (`.nML`) descriptions, custom-ISA extension sources, and `chess` compiler artefacts.
 - Pre-compiled program-memory images that contain `chess`-produced binaries.
-
-We provide a documented core interface (`docs/core_interface.md`) so the design can be reproduced with any RV32IM core that exposes the equivalent bus and clock-gate signals.
-
+  
 ---
 
 ## Repository layout
 
 ```
-dynn-rv-soc/
+DyNN-RV-SoC/
 ├── README.md
-├── LICENSE              (Apache-2.0, except where noted)
-├── CITATION.cff
-├── pipeline/
-│   ├── prepare_backbone.py
-│   ├── insert_exits.py
-│   ├── train_multiexit.py
-│   ├── quantize_int8.py
-│   ├── tvm_compile.py
-│   └── requirements.txt
-├── placement/
-│   ├── place_exits.py            # Algorithm 1
-│   ├── cost_model.py             # alpha_acc accounting
-│   └── examples/
+├── software/
+│   ├── model_to_multi_exit_C.ipynb
 ├── accel_codegen/
-│   ├── rewrite_pass.py
-│   ├── tile_planner.py
-│   └── intrinsics.h
+│   ├── tvm_accel_gen.py
+│   └── AHBconv.h
 ├── rtl/
 │   ├── ahbconv/
 │   │   ├── ahbconv_top.v
@@ -60,18 +44,11 @@ dynn-rv-soc/
 │   │   ├── mac_engine.v
 │   │   ├── requant.v
 │   │   └── cdc.v
-│   ├── glue/
-│   │   ├── ahb_decoder.v
-│   │   ├── ahb_bridge.v
-│   │   ├── clkgate_ctrl.v
-│   │   └── reset_ctrl.v
 │   ├── peripherals/
 │   │   ├── ahb_uart.v
-│   │   ├── prof_timer.v
+│   │   ├── ahb_timer.v
 │   │   └── bram_dp.v
-│   └── tb/
 ├── fpga/
-│   ├── build_zcu102.tcl
 │   ├── constraints/zcu102.xdc
 │   └── README.md
 ├── models/
@@ -81,7 +58,6 @@ dynn-rv-soc/
 ├── scripts/
 │   ├── host_measure.py
 │   ├── uart_protocol.md
-│   └── cifar10_subset.npz
 └── docs/
     ├── architecture.md
     ├── core_interface.md
