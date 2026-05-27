@@ -6,7 +6,7 @@ A dual-core RISC-V SoC with a lightweight INT8 dot-product accelerator and an en
 
 ## What is, and is not, in this repository
 
-**This repository is a partial release.** The RISC-V cores in the published SoC are instances of Synopsys `trv32p3` (ASIP Designer); the corresponding RTL, microarchitecture description, and toolchain (`chess` compiler) are **Synopsys property**.
+The RISC-V cores in the SoC are instances of Synopsys `trv32p3` (ASIP Designer); the corresponding RTL, microarchitecture description, and toolchain (`chess` compiler) are **Synopsys property**.
 
 ### Included
 
