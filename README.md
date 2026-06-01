@@ -39,23 +39,21 @@ DyNN-RV-SoC/
 │   └── AHBconv.h
 ├── rtl/
 │   ├── ahbconv/
-│   │   ├── ahbconv_top.v
-│   │   ├── ahb_slave.v
-│   │   ├── scratchpad.v
-│   │   ├── mac_engine.v
-│   │   ├── requant.v
-│   │   └── cdc.v
+│   │   ├── AHBconv.v
 │   ├── peripherals/
-│   │   ├── ahb_uart.v
-│   │   ├── ahb_timer.v
-│   │   └── bram_dp.v
+|   |   ├── uart
+|   |   |   ├── AHBuart.v
+|   |   |   ├── fifo.v
+|   |   |   ├── uart.v
+|   |   ├── timer
+│   │   |   ├── AHBtimer.v
 ├── fpga/
 │   ├── constraints/zcu102.xdc
 │   └── README.md
 ├── models/
-│   ├── mnv1/  (network_A.c, network_B.c, weights/)
-│   ├── mnv2/
-│   └── mnv3s/
+│   ├── MobileNetV1/
+│   ├── MobileNetV2/
+│   └── MobileNetV3small/
 ├── scripts/
 │   ├── host_measure.py
 │   ├── uart_protocol.md
