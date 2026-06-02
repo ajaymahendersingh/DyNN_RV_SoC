@@ -11,7 +11,7 @@ The RISC-V cores in the SoC are instances of Synopsys `trv32p3` (ASIP Designer);
 ### Included
 
 - `software/` — Python toolflow: backbone preparation, exit-head insertion, training, INT8 post-training quantization (TFLite), and TVM-based bare-metal C generation.
-- `accel_codegen/` — Post-generation rewriting pass that converts TVM-emitted C for pointwise / dense layers into accelerator-tiled intrinsics.
+- `accel_codegen/` — Script to convert C code for pointwise / dense / layers / requantization logic into accelerator intrinsics.
 - `rtl/conv_accel/` — Synthesizable Verilog for the AHBconv dot-product accelerator (AHB-Lite slave, dual-clock scratchpad, INT8 SIMD MAC, per-channel requantization).
 - `rtl/peripherals/` — AHB-UART, AHB-timer.
 - `rtl/top/` - Top level file, SoC clock and reset control, Decoder, Multiplexer, AHB data memory, AHB trv32p3 glue logic.
