@@ -2,7 +2,7 @@
 
 This folder holds the **constraints** and the **build instructions** for synthesizing
 the dual-core RISC-V SoC RTL onto an AMD Xilinx **ZCU102** evaluation board.
-The RTL itself lives one level up, in [`../rtl`](../rtl).
+RTL files are one level up, in [`../rtl`](../rtl).
 
 > **Scope.** This README covers RTL → bitstream only. It does **not** cover the
 > RISC-V firmware (the BB/EE C code is built with a separate Synopsys ASIP Designer
@@ -17,54 +17,7 @@ The RTL itself lives one level up, in [`../rtl`](../rtl).
 | AMD Vivado | **2024.2** (the version the design was validated on) |
 | Target board | ZCU102 (Zynq UltraScale+ MPSoC, part **`xczu9eg-ffvb1156-2-e`**) |
 | OS | Linux or Windows; Linux assumed below |
-| Disk | ~30 GB free for the Vivado project and build artifacts |
 
-Confirm Vivado is on your `PATH`:
-
-```bash
-vivado -version      # should report v2024.2
-```
-
----
-
-## Repository layout
-
-```
-.
-├── rtl/                      # SoC RTL sources  (one level up from this folder)
-│   └── *.v / *.sv            #   processor glue, AHB-Lite bus, scratchpad,
-│                             #   clock-gating + reset controllers, AHBconv, ...
-└── fpga/                     # ← you are here
-    ├── README.md             # this file
-    └── constraints/          # ZCU102 .xdc constraint file(s)
-        └── zcu102.xdc
-```
-
-> If your local paths differ, adjust the `add_files` / `read_xdc` lines in the
-> build script below to match.
-
----
-
-## Quick build (recommended)
-
-A non-project (scripted) flow is the most reproducible. From the **repository root**:
-
-```bash
-vivado -mode batch -source fpga/build_zcu102.tcl
-```
-
-If you do not yet have `build_zcu102.tcl`, create it from the template in the
-[Build script](#build-script-buildzcu102tcl) section below.
-
-On success you will find the bitstream at:
-
-```
-build/dynn_soc.bit
-```
-
-and the post-route utilization / timing reports under `build/`.
-
----
 
 ## Manual build (Vivado GUI)
 
@@ -93,61 +46,6 @@ Prefer clicking through the GUI? Follow these steps.
    design meets timing and fits (see [Expected results](#expected-results)).
 
 ---
-
-## Build script (`build_zcu102.tcl`)
-
-Save this as `fpga/build_zcu102.tcl`. Paths are written relative to the
-**repository root** (where you launch Vivado).
-
-```tcl
-# build_zcu102.tcl — non-project synth/impl/bitstream for the DyNN RISC-V SoC
-# Run from the repo root:  vivado -mode batch -source fpga/build_zcu102.tcl
-
-set PART     xczu9eg-ffvb1156-2-e
-set TOP      soc_top                       ;# <-- set to your actual top module
-set OUTDIR   build
-set RTL_DIR  rtl
-set XDC      fpga/constraints/zcu102.xdc
-
-file mkdir $OUTDIR
-
-# --- read sources ---------------------------------------------------------
-# Picks up .v, .sv, and .vhd under rtl/. Adjust globs to match your sources.
-foreach f [glob -nocomplain $RTL_DIR/*.v $RTL_DIR/*.sv] {
-    read_verilog -sv $f
-}
-foreach f [glob -nocomplain $RTL_DIR/*.vhd] {
-    read_vhdl $f
-}
-read_xdc $XDC
-
-# --- synthesis ------------------------------------------------------------
-synth_design -top $TOP -part $PART
-write_checkpoint -force $OUTDIR/post_synth.dcp
-report_utilization -file $OUTDIR/post_synth_util.rpt
-
-# --- implementation -------------------------------------------------------
-opt_design
-place_design
-phys_opt_design
-route_design
-write_checkpoint -force $OUTDIR/post_route.dcp
-
-# --- reports --------------------------------------------------------------
-report_timing_summary -file $OUTDIR/timing_summary.rpt
-report_utilization    -file $OUTDIR/post_route_util.rpt
-report_power          -file $OUTDIR/power.rpt
-
-# --- bitstream ------------------------------------------------------------
-write_bitstream -force $OUTDIR/dynn_soc.bit
-puts "BUILD COMPLETE -> $OUTDIR/dynn_soc.bit"
-```
-
-Two things to set before the first run:
-
-- **`TOP`** — change `soc_top` to the actual top-level module name in `../rtl`.
-- **Source globs** — if your RTL uses other extensions or subdirectories,
-  extend the `glob` patterns in the `read_*` loops.
 
 ---
 
