@@ -16,7 +16,7 @@ RTL files are one level up, in [`../rtl`](../rtl).
 |---|---|
 | AMD Vivado | **2024.2** (the version the design was validated on) |
 | Target board | ZCU102 (Zynq UltraScale+ MPSoC, part **`xczu9eg-ffvb1156-2-e`**) |
-| OS | Linux or Windows; Linux assumed below |
+| OS | Linux or Windows
 
 
 ## build (Vivado GUI)
@@ -33,7 +33,7 @@ RTL files are one level up, in [`../rtl`](../rtl).
    `Add Sources → Add or create constraints` → add
    [`constraints/zcu102.xdc`](constraints/).
 
-4. Create BRAM from IP catalog for ROM and dual port RAM.
+4. Create BRAM from IP catalog for ROM and dual port RAM using native interface.
 
 5. **Synthesize.** `Run Synthesis`.
 
