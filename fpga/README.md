@@ -31,7 +31,7 @@ RTL files are one level up, in [`../rtl`](../rtl).
 
 3. **Add the constraints.**
    `Add Sources → Add or create constraints` → add
-   [`zcu102.xdc`](constraints/).
+   `zcu102.xdc`
 
 4. Create BRAM from IP catalog for ROM and dual port RAM using native interface.
 
