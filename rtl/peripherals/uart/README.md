@@ -39,8 +39,8 @@ module AHBuart #(
 ### 2. `uart.vp`
 ```verilog
 module uart #(
-    parameter CLK_FREQ  = 100_000_000,  // system clock frequency in Hz
-    parameter BAUD_RATE = 230400        // desired baud rate
+    parameter CLK_FREQ  = 100_000_000,  
+    parameter BAUD_RATE = 230400        
 )(
     input clk,                  // main clock, drives all logic
     input rst,                  // asynchronous reset
