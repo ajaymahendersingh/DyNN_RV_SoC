@@ -35,7 +35,7 @@ module AHBuart #(
             output reg rxnew_LED,
             output reg txgo_LED
     );
----
+```
 ### 2. `uart.vp`
 ```verilog
 module uart #(
@@ -52,7 +52,7 @@ module uart #(
     output reg [7:0] rxdout,    // 8-bit received data
     output rxnew                // indicates new data available, asserted for 1 clock
 );
-
+```
 ### 3. `fifo.vp`
 ```verilog
 module FIFO #(parameter DWIDTH=8, AWIDTH=1)
