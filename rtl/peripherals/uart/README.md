@@ -35,7 +35,7 @@ module AHBuart #(
             output reg rxnew_LED,
             output reg txgo_LED
     );
-
+---
 ### 2. `uart.vp`
 ```verilog
 module uart #(
