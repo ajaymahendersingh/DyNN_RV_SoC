@@ -1,19 +1,16 @@
-```markdown
 # AHB-Lite UART IP Core (Encrypted RTL)
 
-This repository contains the encrypted Verilog RTL files (`.vp`) for an AHB-Lite UART IP core featuring internal FIFO buffering. This repository is provided for verification and evaluation purposes in association with our paper submission.
+This folder contains the encrypted Verilog RTL files (`.vp`) for an AHB-Lite UART IP core.
 
-## ⚠️ Tool Compatibility & Requirements
+## Tool Compatibility & Requirements
 
-* **Encryption Tool:** AMD Vivado 2024.2 (IEEE 1735)
-* **Compatibility:** **Forward-compatible only.** This core will synthesize and simulate successfully in Vivado 2024.2 or newer. It is **not** backward-compatible and will fail to decrypt in Vivado 2023.2 or earlier versions.
-* **Supported Simulator:** Vivado XSIM (Native support).
-
+* **Encryption Tool:** AMD Vivado 2024.2 (IEEE 1735 v2)
+* **Compatibility:** **Forward-compatible only.** This core will synthesize and simulate successfully in Vivado 2024.2 or newer. It is **not** backward-compatible and will fail to decrypt in earlier versions (claim validated on vivado 2023.2).
 ---
 
-## 💻 Black-Box Instantiation Stubs
+## Black-Box Instantiation Stubs
 
-Since the source code is encrypted, treat these modules as black boxes. Use the templates below to instantiate them into your top-level system design.
+Since the source code is encrypted, treat these modules as black boxes. Use the templates below to instantiate them into your top-level design.
 
 ### 1. AHB-Lite UART Top-Level (`AHBuart.vp`)
 ```verilog
