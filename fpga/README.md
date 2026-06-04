@@ -19,7 +19,7 @@ RTL files are one level up, in [`../rtl`](../rtl).
 | OS | Linux or Windows
 
 
-## build (Vivado GUI)
+## build
 
 1. **Create the project.**
    `File → Project → New…` → RTL project (do **not** specify sources yet) →
@@ -35,15 +35,5 @@ RTL files are one level up, in [`../rtl`](../rtl).
 
 4. Create BRAM from IP catalog for ROM and dual port RAM using native interface.
 
-5. **Synthesize.** `Run Synthesis`.
-
-6. **Implement.** `Run Implementation`.
-
-7. **Generate the bitstream.** `Generate Bitstream`.
-
-8. **Inspect reports.** After implementation, open
-   `Reports → Timing Summary` and `Reports → Utilization` to confirm the
-   design meets timing and fits.
-
----
+5. Run Synthesis -> Implementation -> Generate Bitstream
 
