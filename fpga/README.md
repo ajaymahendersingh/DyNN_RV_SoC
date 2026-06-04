@@ -35,5 +35,5 @@ RTL files are one level up, in [`../rtl`](../rtl).
 
 4. Create BRAM from IP catalog for ROM and dual port RAM using native interface.
 
-5. Run Synthesis -> Implementation -> Generate Bitstream
+5. Run Synthesis → Implementation → Generate Bitstream
 
