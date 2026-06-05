@@ -54,99 +54,43 @@ DyNN-RV-SoC/
 │   ├── MobileNetV2/
 │   └── MobileNetV3small/
 ├── scripts/
-│   ├── demo/
+│   └── demo/
 ```
 
 ---
 
-## Quick start
+##  Flow steps
 
-### Software pipeline (no FPGA required)
+### Software pipeline
 
-```bash
-# 1. Environment
-python -m venv .venv && source .venv/bin/activate
-pip install -r pipeline/requirements.txt
+Go to folder software/ and run the python notebook. See each cell for details. You will need to select Python 2025.07 in the colab environment. Other versions are not tested but may require minor modifications to be compatible with the TVM and TF versions.
 
-# 2. Prepare backbone, attach exits, train, quantize
-python pipeline/prepare_backbone.py --model mobilenetv2 --dataset cifar10
-python pipeline/insert_exits.py     --config configs/mnv2_netA.yaml
-python pipeline/train_multiexit.py  --epochs 50
-python pipeline/quantize_int8.py    --representative-data data/calib.npz
+The output of this notebook would be a tar file containing the C collaterals. 
 
-# 3. Hardware-aware exit placement
-python placement/place_exits.py \
-    --backbone mobilenetv2 \
-    --alpha-acc 0.25 \
-    --nmax 3 \
-    --d-min 10 --d-l 55 90 --d-tar 70 --lambda 10
+### Build the binary
 
-# 4. TVM compile to C, then rewrite for the accelerator
-python pipeline/tvm_compile.py      --target c --out build/mnv2_netB/
-python accel_codegen/rewrite_pass.py build/mnv2_netB/ --tile auto
-```
+The generated C sources from previous step will be used to create a project in Synopsys ASIP Designer and a main.c should be created (see models/ folder for examples).
+The output of this step will be a hex of the C code that can be used to either download to the processor memory via JTAG or can be dorectly embedded in the BRAM before geenerating the bitstream (will need to convert hex to .coe)
 
 ### FPGA build
 
-The bitstream build expects two RV32IM core blackboxes. We do not distribute them. Two routes:
-
-1. **Internal Synopsys ASIP Designer users**: drop the `trv32p3` outputs into `fpga/cores/` following the interface in `docs/core_interface.md`. Set `USE_SYNOPSYS_TRV32P3=1` in `build_zcu102.tcl`.
-2. **External users**: any RV32IM core exposing the documented AHB-Lite master interface and `x19`-mapped clock-gate hooks will work. We have not validated this path; the custom-ISA performance figures are not reproducible without the extension instructions.
-
-```bash
-cd fpga
-vivado -mode batch -source build_zcu102.tcl
-# bitstream: out/dynn_rv_soc.bit
-```
+The bitstream build expects two RV32IM cores from Synopsys. This along with verilog sources in rtl/ folder and constraints in fpga/ folder can be used to create a Vivado project.
 
 ### Running on the board
 
-```bash
-# Program the board (out-of-tree), then:
-python scripts/host_measure.py \
-    --port /dev/ttyUSB0 --baud 2000000 \
-    --network models/mnv2/network_B.c \
-    --thresholds 90 85 80 \
-    --images scripts/cifar10_subset.npz
-```
-
-Output: per-image latency (from 64-bit hardware timer), exit index taken, predicted class, top-1 accuracy across the 500-image subset.
-
----
-
-## Reproducing the results in the paper
-
-The 6 SoC configurations evaluated in Table IV of the paper are:
-
-| Tag    | Cores | ISA       | Accelerator |
-|--------|-------|-----------|-------------|
-| `SB`   | 1     | RV32IM    | —           |
-| `DB`   | 2     | RV32IM    | —           |
-| `DB+A` | 2     | RV32IM    | AHBconv     |
-| `SE`   | 1     | extended  | —           |
-| `DE`   | 2     | extended  | —           |
-| `DE+A` | 2     | extended  | AHBconv     |
-
-Only the configurations that do **not** depend on the ISA extension (`SB`, `DB`, `DB+A`) are reproducible outside our internal toolchain. The `*E` configurations require the Synopsys ASIP Designer flow to instantiate the custom instructions.
-
-`scripts/run_sweep.sh` drives the full (config × model × threshold) sweep used to produce Figs. 7–10 of the paper.
+Use scripts/demo/ folder to interact with the model on fpga over UART.
 
 ---
 
 ## Limitations of this release
 
 - Weights and activations fit entirely in on-chip BRAM. There is no DDR controller in the released SoC.
-- Trained on CIFAR-10 only. The pipeline is dataset-agnostic; the released checkpoints are not.
+- Trained on CIFAR-10 only.
 - The accelerator covers 1×1 pointwise and dense layers only. 3×3 / depthwise convolutions execute in software.
-- The released cycle-accurate measurements correspond to the `trv32p3` microarchitecture; substituting a different RV32IM core will produce different latencies.
+- The cycle-accurate measurements correspond to the `trv32p3` microarchitecture; substituting a different RV32IM core will produce different latencies.
 
 ---
 
 ## Citing this work
-
-
----
-
-## License
 
 
