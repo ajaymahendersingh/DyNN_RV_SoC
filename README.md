@@ -70,7 +70,8 @@ The output of this notebook would be a tar file containing the C collaterals.
 ### Build the binary
 
 The generated C sources from previous step will be used to create a project in Synopsys ASIP Designer and a main.c should be created (see models/ folder for examples).
-The output of this step will be a hex of the C code that can be used to either download to the processor memory via JTAG or can be dorectly embedded in the BRAM before geenerating the bitstream (will need to convert hex to .coe)
+To offload some compute to the provided convolution accelerator, use the python script from accel_codegen/ folder.
+The output of this step will be a hex of the C code (with or w/o the accelerator intrinsics) that can be used to either download to the processor memory via JTAG or can be dorectly embedded in the BRAM before geenerating the bitstream (will need to convert hex to .coe)
 
 ### FPGA build
 
