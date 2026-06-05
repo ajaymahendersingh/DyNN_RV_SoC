@@ -20,7 +20,7 @@ node generate_demo_pptx.js demo_output/
 | `--port` | `/dev/ttyUSB2` | Serial port |
 | `--baud` | `2000000` | Baud rate |
 | `--images` | *(required)* | Folder of JPG/PNG/BMP/WEBP images |
-| `--profile` | `90/80/70` | Per-exit thresholds `EE1/EE2/EE3` (illustrative, not an operating point claimed in the paper) |
+| `--profile` | `90/80/70` | Per-exit thresholds `EE1/EE2/EE3` |
 | `--output` | `demo_output` | Output directory |
 | `--label` | *(none)* | Optional ground-truth class for all images |
 
