@@ -1,0 +1,12 @@
+{
+  "name": "fpga-demo-pptx",
+  "version": "1.0.0",
+  "description": "Generate a PPT from fpga_demo.py results.json",
+  "private": true,
+  "scripts": {
+    "build": "node generate_demo_pptx.js demo_output/"
+  },
+  "dependencies": {
+    "pptxgenjs": "4.0.1"
+  }
+}
