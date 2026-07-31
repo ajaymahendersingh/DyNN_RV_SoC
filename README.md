@@ -33,6 +33,8 @@ DyNN-RV-SoC/
 ├── README.md
 ├── software/
 │   ├── model_to_multi_exit_C.ipynb
+│   ├── model_to_multi_exit_C__resnet8.ipynb
+│   ├── model_to_multi_exit_C__squeezenet.ipynb
 ├── accel_codegen/
 │   ├── tvm_accel_gen.py
 │   └── AHBconv.h
