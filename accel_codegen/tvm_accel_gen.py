@@ -69,8 +69,8 @@ def classify(name, body, sig=''):
         if 'nn_conv2d' in name:
             return 'SPATIAL_3x3'
     if 'nn_conv2d' in name:
-        # Exclude fused residual+conv functions (two int8_t* inputs: p0 and p1)
-        if 'int8_t* p1' in sig:
+        # Exclude fused residual+conv functions
+        if re.search(r'\bp1\s*\[', body) or re.search(r'\*\s*p1\b', sig):
             return 'FUSED_RESIDUAL'
         # Batched pointwise: has ff loop over output channels
         if 'for (int32_t rc' in body and 'for (int32_t ff' in body:
@@ -236,6 +236,37 @@ def compute_tile_size(in_ch, total_out):
 #  Code generators
 # ============================================================
 
+def verify_pointwise_assumptions(name, body, rc_ch, n_pixels):
+
+    problems = []
+
+    if re.search(r'\bp1\s*\[', body):
+        problems.append("reads p1[] (residual add) which the generated code drops")
+
+    n_fpm = len(re.findall(r'\*\s*\(int64_t\)\d+\)', body))
+    n_fpm += len(re.findall(r'\*\s*\(\(int64_t\)\(\(int32_t\*\)\w+\)\[ax3\]\)', body))
+    if n_fpm > 2:                      # v_ and its duplicated v__2 twin
+        problems.append(f"{n_fpm} fixed-point-multiply stages; only 1 is emitted")
+
+    m = re.search(r'\(\(int8_t\*\)(\w*pad_temp\w*|\w+)_?let\)\[([^\]]*rc[^\]]*)\]', body)
+    idx = m.group(2) if m else ''
+    if 'pad_temp' in body:
+        problems.append("input is staged through pad_temp (cropped/padded copy)")
+    if re.search(r'ax0_ax1_fused_ax2_fused\s*(>>|&)', idx):
+        problems.append(f"non-unit spatial stride in input index: {idx.strip()}")
+
+    m = re.search(r'i0_i1_fused < (\d+)', body)
+    if m:
+        src_rows = int(m.group(1))
+        if src_rows * src_rows > n_pixels:
+            problems.append(
+                f"source is >={src_rows}x{src_rows} px but _inp is sized for "
+                f"{n_pixels} px; the copy would truncate the input")
+
+    if problems:
+        raise ValueError("pointwise preconditions violated: " + "; ".join(problems))
+
+
 def gen_pointwise(name, sig, body):
 
     """Accelerated 1×1 conv2d """
@@ -256,6 +287,8 @@ def gen_pointwise(name, sig, body):
         n_outer = 1
 
     n_pixels = _int(r'for \(int32_t ax0_ax1_fused_ax2_fused = 0; ax0_ax1_fused_ax2_fused < (\d+)', body)
+
+    verify_pointwise_assumptions(name, body, rc_ch, n_pixels)
 
     # Parse ALL void* let declarations → list of (var_name, offset)
     let_decls = []
@@ -285,7 +318,8 @@ def gen_pointwise(name, sig, body):
     # Identify the requant expression structure
     # Two patterns:
     #   A) (dot + sub[ax3]) - const[ax3]  → has both subtract_constant and plain constant
-    #   B) dot + const[ax3]               → has only plain constant (no subtract)
+    #   B) dot + const[ax3]                → has only plain constant (no subtract)
+    # Detect by checking if the requant line has a subtraction after the first addition
     requant_line = ''
     for line in lines:
         if '+ 31) - 1)' in line and '>>' in line:
@@ -488,7 +522,7 @@ def _gen_pointwise(name, sig, body, rc_ch, total_out, n_pixels,
         inp_pad_decl = ''
         inp_stage_emit = f'      accel_spad_write(0x{inp_spad:03X}, &_inp[sp * {rc_ch}], {rc_ch});'
 
-    return f'''  // [ACCELERATED HW-REQUANT] 1x1 conv: {rc_ch}->{total_out} channels, {n_pixels} spatial positions
+    return f'''  // [ACCELERATED v8 HW-REQUANT] 1x1 conv: {rc_ch}->{total_out} channels, {n_pixels} spatial positions
   int32_t* quant_shift = (int32_t*)(&{cws}[{shift_off}]);
   int32_t* quant_scale = (int32_t*)(&{cws}[{fpm_off}]);
 {bias_decl}
