@@ -16,7 +16,7 @@ The RISC-V cores in the SoC are instances of Synopsys `trv32p3` (ASIP Designer);
 - `rtl/peripherals/` — AHB-UART, AHB-timer.
 - `rtl/top/` - Top level file, SoC clock and reset control, Decoder, Multiplexer, AHB data memory, AHB trv32p3 glue logic.
 - `fpga/` — Vivado constraints, and build instructions for ZCU102.
-- `models/` — Generated INT8 multi-exit MobileNetV1 / V2 / V3-Small networks (Network A and Network B), with generated C sources for each.
+- `models/` — Generated INT8 multi-exit models, with generated C sources for each.
 - `scripts/` — demo scripts for streaming images to fpga over UART and generating a PPT of the classification results.
 
 ### Excluded
@@ -53,6 +53,8 @@ DyNN-RV-SoC/
 │   ├── MobileNetV1/
 │   ├── MobileNetV2/
 │   └── MobileNetV3small/
+│   └── SqueezeNet/
+│   └── ResNet8/
 ├── scripts/
 │   └── demo/
 ```
