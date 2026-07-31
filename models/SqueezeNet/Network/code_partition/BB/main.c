@@ -212,7 +212,7 @@ static void print_banner(void)
     uart_tx_str("  Image Classification System\n");
     uart_tx_str("****************************************\n");
     uart_tx_str("Processor: Synopsys TRV32P3 with EE\n");
-    uart_tx_str("Model: MobileNetV3Small - 10 classes (CIFAR-10)\n");
+    uart_tx_str("Model: SqueezeNet - 10 classes (CIFAR-10)\n");
     uart_tx_str("Input: 49152 bytes (12288 float32)\n");
     uart_tx_str("Per-exit thresholds: EE1/EE2/EE3\n");
     uart_tx_str("****************************************\n\n");
@@ -362,7 +362,7 @@ int main(void)
 
     /* Setup inputs/outputs */
     struct tvmgen_default_inputs inputs = {
-        .serving_default_input_243_0 = NULL
+        .serving_default_input_0 = NULL
     };
     struct tvmgen_default_outputs outputs = {
         .StatefulPartitionedCall_0 = (void *)&output_BB
@@ -387,13 +387,13 @@ int main(void)
     write_thresholds();
     print_thresholds();
 
-    inputs.serving_default_input_243_0 = (void *)&test_image;
+    inputs.serving_default_input_0 = (void *)&test_image;
     #else
     ee_thresholds[0] = 95;  /* EE1: strictest */
     ee_thresholds[1] = 90;  /* EE2: medium    */
     ee_thresholds[2] = 80;  /* EE3: lenient   */
     write_thresholds();
-    inputs.serving_default_input_243_0 = (void *)&AIRPLANE_000;
+    inputs.serving_default_input_249_0 = (void *)&AIRPLANE_000;
     #endif
 
     /* Run inference */

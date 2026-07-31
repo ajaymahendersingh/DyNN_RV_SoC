@@ -94,7 +94,7 @@ int main(void){
             .StatefulPartitionedCall_3 = (void*)&output_EE[2],
         };
     
-        PRINTF("Evaluating multi-exit MobileNetV3small:\n");
+        PRINTF("Evaluating multi-exit SqueezeNet:\n");
     
         *HANDSHAKE= 0xC0;
         clock_gate_signal();
