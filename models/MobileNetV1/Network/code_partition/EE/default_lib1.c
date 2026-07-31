@@ -1,8 +1,5 @@
-//#define DUMP_OUTPUTS
-//#define INCLUDE_ACCEL
 #include "config.h"
 #include "clock_ctrl.h"
-//#include "conv_accel_v8.h"
 // tvm target: c -keys=cpu 
 #define TVM_EXPORTS
 #include "tvm/runtime/c_runtime_api.h"
