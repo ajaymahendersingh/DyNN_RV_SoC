@@ -96,6 +96,4 @@ Use scripts/demo/ folder to interact with the model on fpga over UART.
 
 ---
 
-## Citing this work
-
 
