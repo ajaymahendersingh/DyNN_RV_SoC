@@ -1,0 +1,7 @@
+__pycache__/
+*.pyc
+.ipynb_checkpoints/
+work/
+# rebuilt by data/cifar10_64/make_bins.py
+data/cifar10_64/bin/
+data/cifar10_64/c/

@@ -1,0 +1,20 @@
+cff-version: 1.2.0
+message: "If you use this repository, please cite the paper below."
+title: "DyNN-RV-SoC"
+repository-code: "https://github.com/ajaymahendersingh/DyNN_RV_SoC"
+authors:
+  - name: "Ajay Kumar M"
+  - name: "Vishnu P S"
+  - name: "Shreejith Shanker"
+  - name: "Lizy Kurian John"
+  - name: "Deepu John"
+preferred-citation:
+  type: article
+  title: "DyNN-RV: An End-to-End Hardware–Software Co-Design Framework for Dynamic Neural Network Inference on RISC-V SoC"
+  authors:
+    - name: "Ajay Kumar M"
+    - name: "Vishnu P S"
+    - name: "Shreejith Shanker"
+    - name: "Lizy Kurian John"
+    - name: "Deepu John"
+  notes: "Under review"

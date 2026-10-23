@@ -1,0 +1,20 @@
+{
+ "model": "ResNet8",
+ "platform": "DE+A (ZCU102, 100 MHz)",
+ "units": "clock cycles of the BB core",
+ "source": "profiling build of the deployed network (hardware timer after every operator); head cost per MAC from the cycle-accurate simulator of the EE core (software)",
+ "head_cycles_per_mac": 6.3052,
+ "backbone": {
+  "input": 3740362.1,
+  "stem_conv": 3967132.0,
+  "stack1_block1_conv1": 15491846.0,
+  "stack1_block1_conv2": 15953994.0,
+  "stack2_block1_conv1": 7802938.0,
+  "stack2_block1_conv2": 14906763.0,
+  "stack2_block1_proj": 1232446.0,
+  "stack3_block1_conv1": 6276735.0,
+  "stack3_block1_conv2": 12179683.0,
+  "stack3_block1_proj": 946363.0,
+  "stack3_block1_out": 33943.4
+ }
+}
