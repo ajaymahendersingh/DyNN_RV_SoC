@@ -3,14 +3,6 @@
     python make_code_partition.py <model>_EE_int8_aot.tar <out dir> --main-from <dir with BB/main.c and EE/main.c>
                                   [--no-accel] [--interactive]
 
-Writes <out dir>/{BB,EE}/{default_lib0.c, default_lib1.c, main.c}, laid out like models/<model>/Network/code_partition:
-  1. extracts the TVM model library format archive (written by the notebooks in software/);
-  2. rewrites default_lib1.c with accel_codegen/tvm_accel_gen.py so that pointwise convolutions and dense layers run on
-     the accelerator (default answers, as for the paper; --interactive to answer the prompts, --no-accel to skip);
-  3. splits the code with split_dual_core.py: backbone operators on the BB core, exit-head operators on the EE core,
-     with the handshake and clock-gating calls at every exit;
-  4. copies main.c of both cores from --main-from (a network with the same number of exits, e.g.
-     models/MobileNetV2/Network/code_partition) and replaces the name of the network input.
 The output is compiled for the two trv32p3 cores with Synopsys ASIP Designer (not part of this repository).
 """
 import re, subprocess, sys, tarfile, tempfile
@@ -34,7 +26,7 @@ def main():
         with tarfile.open(tar) as t:
             try:
                 t.extractall(tmp, filter="data")
-            except TypeError:                            # Python < 3.11.4
+            except TypeError:
                 t.extractall(tmp)
         src = tmp / "codegen/host/src"
         lib1 = src / "default_lib1.c"
