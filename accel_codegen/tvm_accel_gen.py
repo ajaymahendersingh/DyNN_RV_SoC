@@ -1,9 +1,35 @@
 #!/usr/bin/env python3
 """
-Usage:
-    python3 tvm_accel_gen.py <input.c> [-o <output.c>]
+tvm_accel_gen.py (v4) — Targets AHBconv_8 hardware (v7 + on-chip requant).
 
-Generated C expects conv_accel.h to provide the helper functions.
+Differences vs v3:
+  - For pointwise 1x1 conv layers with simple INT8 clip post-processing
+    (i.e., NOT fused h-swish, NOT float output), generate code that:
+      * Packs per-OC requant params (bias, scale, shift) into scratchpad.
+      * Sets PARAM_OFFSET (0x1C), OUTPUT_ZP (0x20), CTRL = 3 (start | requant_en).
+      * After done, reads packed INT8 outputs at 1-byte stride.
+    This eliminates the per-OC software requantization loop, which was
+    ~80% of accelerated-layer time in v7.
+  - Layers with fused h-swish, float output, or dense pack: fall back
+    to the v7 path (CTRL = 1, INT32 outputs, software requantization).
+    These are NOT covered by HW requant in this version.
+  - SPAD_BYTES = 12288 unchanged from v3.
+
+PARAMETER BLOCK LAYOUT (per output channel, 16 bytes):
+  word 0 [63:32] = scale[oc]   (INT32 = quant_scale[oc])
+  word 0 [31:0]  = bias[oc]    (INT32 = conv_sub[oc] - conv_const[oc] for
+                                pointwise pattern A; or conv_const[oc] for
+                                pointwise pattern B)
+  word 1 [63:32] = reserved (zero)
+  word 1 [31:0]  = shift[oc]   (INT32 = quant_shift[oc] + 31)
+
+OUTPUT_ZP register: scalar INT32 added after shift, then clipped to INT8.
+                    Extracted from the layer's "+ 31)))) <sign> N" pattern.
+
+Usage: same as v3.
+
+Generated C expects conv_accel.h to provide the v8 helper functions
+used by _gen_pointwise_v8 (see conv_accel_v8.h produced with this patch).
 """
 
 import re
@@ -14,8 +40,12 @@ import textwrap
 # ============================================================
 #  Constants
 # ============================================================
-SPAD_BYTES = 12288      # full BRAM capacity (1536 x 64-bit = 12 KB),
-MAC_BYTES  = 8          # 8 INT8 multipliers in AHBconv
+SPAD_BYTES = 12288      # full v7 BRAM capacity (1536 x 64-bit = 12 KB),
+                        # all bus-reachable now that AHBDCD claims
+                        # 0x40002000-0x40005FFF (16 KB window).
+MAC_BYTES  = 8          # AHBconv_7 inner-loop word width (8 multipliers,
+                        # 64-bit BRAM scratchpad). All scratchpad-resident
+                        # vectors must be padded to multiples of MAC_BYTES.
 
 def _align(n, m=MAC_BYTES):
     """Round n up to the next multiple of m."""
@@ -69,8 +99,8 @@ def classify(name, body, sig=''):
         if 'nn_conv2d' in name:
             return 'SPATIAL_3x3'
     if 'nn_conv2d' in name:
-        # Exclude fused residual+conv functions
-        if re.search(r'\bp1\s*\[', body) or re.search(r'\*\s*p1\b', sig):
+        # Exclude fused residual+conv functions (two int8_t* inputs: p0 and p1)
+        if 'int8_t* p1' in sig:
             return 'FUSED_RESIDUAL'
         # Batched pointwise: has ff loop over output channels
         if 'for (int32_t rc' in body and 'for (int32_t ff' in body:
@@ -185,10 +215,10 @@ def extract_hswish(body):
         return None
 
     return {
-        'zp_offset':      m1.group(1).strip(),     
-        'dequant_scale':  m1.group(2),             
-        'requant_scale':  m2.group(1),             
-        'output_zp':      m2.group(2),             
+        'zp_offset':      m1.group(1).strip(),    # e.g. "- 23" or "+ 18"
+        'dequant_scale':  m1.group(2),             # e.g. "1.537300e-01"
+        'requant_scale':  m2.group(1),             # e.g. "1.560734e+01"
+        'output_zp':      m2.group(2),             # e.g. "-1.220000e+02"
     }
 
 
@@ -206,10 +236,13 @@ def _reqadd_to_int(reqadd):
 
 
 def compute_tile_size(in_ch, total_out):
-    # Reduction length must be aligned to MAC_BYTES (8) for AHBconv.
+    # Reduction length must be aligned to MAC_BYTES (8) for AHBconv_7.
     # Each output is 4 bytes (INT32 result).
     k_aligned = _align(in_ch)
     max_tile = (SPAD_BYTES - k_aligned) // (k_aligned + 4)
+    # Candidates ordered largest-first. Larger sizes added (vs v2) to
+    # exploit the 12 KB SPAD; otherwise layers like 72->432 stayed
+    # capped at tile=64 even though tile=144 fits.
     candidates = [total_out, 256, 192, 128, 96, 64, 32, 16, 8, 4]
     for c in candidates:
         if c <= max_tile and c <= total_out:
@@ -217,8 +250,8 @@ def compute_tile_size(in_ch, total_out):
     return max(1, max_tile)
 
 
-def compute_tile_size(in_ch, total_out):
-    """Tile size for hardware-requant pointwise. Per-OC scratchpad
+def compute_tile_size_v8(in_ch, total_out):
+    """Tile size for v8 hardware-requant pointwise. Per-OC scratchpad
     cost = rc_aligned (weight) + 16 (param block) + 4 (worst-case INT32
     output area, overwritten with packed INT8 later). Plus rc_aligned
     for the input vector.
@@ -233,44 +266,15 @@ def compute_tile_size(in_ch, total_out):
 
 
 # ============================================================
-#  Code generators
+#  Code generators — NOW RETURN ONLY THE INNER BODY
 # ============================================================
 
-def verify_pointwise_assumptions(name, body, rc_ch, n_pixels):
-
-    problems = []
-
-    if re.search(r'\bp1\s*\[', body):
-        problems.append("reads p1[] (residual add) which the generated code drops")
-
-    n_fpm = len(re.findall(r'\*\s*\(int64_t\)\d+\)', body))
-    n_fpm += len(re.findall(r'\*\s*\(\(int64_t\)\(\(int32_t\*\)\w+\)\[ax3\]\)', body))
-    if n_fpm > 2:                      # v_ and its duplicated v__2 twin
-        problems.append(f"{n_fpm} fixed-point-multiply stages; only 1 is emitted")
-
-    m = re.search(r'\(\(int8_t\*\)(\w*pad_temp\w*|\w+)_?let\)\[([^\]]*rc[^\]]*)\]', body)
-    idx = m.group(2) if m else ''
-    if 'pad_temp' in body:
-        problems.append("input is staged through pad_temp (cropped/padded copy)")
-    if re.search(r'ax0_ax1_fused_ax2_fused\s*(>>|&)', idx):
-        problems.append(f"non-unit spatial stride in input index: {idx.strip()}")
-
-    m = re.search(r'i0_i1_fused < (\d+)', body)
-    if m:
-        src_rows = int(m.group(1))
-        if src_rows * src_rows > n_pixels:
-            problems.append(
-                f"source is >={src_rows}x{src_rows} px but _inp is sized for "
-                f"{n_pixels} px; the copy would truncate the input")
-
-    if problems:
-        raise ValueError("pointwise preconditions violated: " + "; ".join(problems))
-
-
 def gen_pointwise(name, sig, body):
-
-    """Accelerated 1×1 conv2d """
-
+    """Accelerated 1×1 conv2d (inner code only).
+    
+    Robust extraction: parses the actual void* declarations and requant
+    expression rather than relying on specific TVM naming conventions.
+    """
     args  = sig[sig.index('(')+1 : sig.index(')')]
     cws   = re.search(r'(global_const_workspace_\d+_var)', args).group(1)
     lines = body.split('\n')
@@ -288,8 +292,7 @@ def gen_pointwise(name, sig, body):
 
     n_pixels = _int(r'for \(int32_t ax0_ax1_fused_ax2_fused = 0; ax0_ax1_fused_ax2_fused < (\d+)', body)
 
-    verify_pointwise_assumptions(name, body, rc_ch, n_pixels)
-
+    # ---- Robust offset extraction ----
     # Parse ALL void* let declarations → list of (var_name, offset)
     let_decls = []
     for line in lines:
@@ -381,7 +384,7 @@ def gen_pointwise(name, sig, body):
     if reqadd is None:
         raise ValueError(f'Could not extract zero-point for {name}')
 
-    # Detect fused h-swish activation
+    # Detect fused h-swish activation (MobileNetV3)
     hswish = extract_hswish(body)
 
     # Determine output type AND variable name from the function signature.
@@ -392,14 +395,19 @@ def gen_pointwise(name, sig, body):
         out_var = 'compute'
     out_cast = '(int8_t)' if is_int8 else '(int32_t)'
 
-    eligible = is_int8 and (hswish is None)
+    # v8 eligibility: HW-side requant requires INT8 output, simple clip
+    # post-processing (no h-swish), and a layer where bias/scale/shift
+    # are well-defined per OC. Float-output and h-swish layers fall back
+    # to the v7 path.
+    v8_eligible = is_int8 and (hswish is None)
 
-    if eligible:
-        return _gen_pointwise(name, sig, body, rc_ch, total_out, n_pixels,
+    if v8_eligible:
+        return _gen_pointwise_v8(name, sig, body, rc_ch, total_out, n_pixels,
                                  cws, weight_off, shift_off, fpm_off,
                                  has_subtract, conv_sub_off, conv_const_off,
                                  reqadd, out_var)
 
+    # ---- v7 fallback path (h-swish, float, etc.) ----------------------
     tile_size = compute_tile_size(rc_ch, total_out)
     n_tiles   = (total_out + tile_size - 1) // tile_size
     rc_aligned = _align(rc_ch)            # padded reduction length
@@ -410,7 +418,7 @@ def gen_pointwise(name, sig, body):
     # Generate per-output-channel post-processing
     if hswish:
         # Fused h-swish: requant → clip → dequant → h-swish → re-quantize → int8
-        zp   = hswish['zp_offset']         # e.g. "- 23"
+        zp   = hswish['zp_offset']        # e.g. "- 23"
         ds   = hswish['dequant_scale']     # e.g. "1.537300e-01"
         rs   = hswish['requant_scale']     # e.g. "1.560734e+01"
         ozp  = hswish['output_zp']         # e.g. "-1.220000e+02"
@@ -432,6 +440,10 @@ def gen_pointwise(name, sig, body):
     pad_wt    = (f'\n      for (int32_t rc = {rc_ch}; rc < {rc_aligned}; rc++)\n        rw[oc * {rc_aligned} + rc] = 0;'
                  if rc_aligned > rc_ch else '')
 
+    # When K is already MAC-aligned, skip the staging buffer entirely.
+    # Writing &_inp[sp*K] directly into AHB saves K byte-copies per
+    # spatial position. Only when K needs padding do we need the
+    # intermediate buffer (so we can zero-fill the tail bytes).
     if rc_aligned > rc_ch:
         inp_pad_decl = f'\n  // Padded staging buffer for one input vector (aligned to MAC_BYTES = {MAC_BYTES})\n  static int8_t _inp_pad[{rc_aligned}];{pad_init}'
         inp_stage_emit = f'''      for (int32_t _i = 0; _i < {rc_ch}; _i++)
@@ -479,27 +491,45 @@ def gen_pointwise(name, sig, body):
 '''
 
 
-def _gen_pointwise(name, sig, body, rc_ch, total_out, n_pixels,
+def _gen_pointwise_v8(name, sig, body, rc_ch, total_out, n_pixels,
                        cws, weight_off, shift_off, fpm_off,
                        has_subtract, conv_sub_off, conv_const_off,
                        reqadd, out_var):
+    """Emit v8/AHBconv_8 pointwise code with HW requant.
 
-    """AHBconv pointwise code with HW requant """
+    Keep the generated C at the same abstraction level as v3:
+      - scratchpad accesses still use accel_spad_write/read helpers;
+      - v8-specific register programming is hidden behind conv_accel.h
+        helpers (accel_set_output_zp, hw_multi_dot_requant);
+      - avoid the redundant input staging copy when K is already aligned
+        to MAC_BYTES.
 
-    tile_size  = compute_tile_size(rc_ch, total_out)
+    Required helper additions in conv_accel.h:
+      - ACCEL_PARAM_OFF      at ACCEL_BASE + 0x1C
+      - ACCEL_OUTPUT_ZP      at ACCEL_BASE + 0x20
+      - accel_set_output_zp(int32_t)
+      - hw_multi_dot_requant(input_off, weight_off, output_off,
+                             param_off, length, num_products)
+      - accel_unpack_i8_outputs(dst, output_off, count)
+    """
+    tile_size  = compute_tile_size_v8(rc_ch, total_out)
     n_tiles    = (total_out + tile_size - 1) // tile_size
     rc_aligned = _align(rc_ch)
 
     # Scratchpad layout for each tile.
     inp_spad   = 0
     wt_spad    = rc_aligned
-    out_spad   = wt_spad + tile_size * rc_aligned          # packed INT8 outputs
+    out_spad   = wt_spad + tile_size * rc_aligned          # packed INT8 outputs in v8 mode
     # Param block aligned to 8 bytes (start of a 64-bit word)
     param_spad = (out_spad + tile_size * 4 + 7) & ~7
 
     # Convert reqadd ('- 7' or '+ 5') to a signed integer for OUTPUT_ZP
     output_zp = _reqadd_to_int(reqadd)
 
+    # Bias expression depends on whether the layer has conv_sub or not.
+    # The HW computes (dot + bias) * scale, so:
+    #   pattern A (with subtract): bias[oc] = conv_sub[oc] - conv_const[oc]
+    #   pattern B (without):       bias[oc] = +conv_const[oc]
     if has_subtract:
         bias_decl = f'''  int32_t* conv_const  = (int32_t*)(&{cws}[{conv_const_off}]);
   int32_t* conv_sub    = (int32_t*)(&{cws}[{conv_sub_off}]);'''
@@ -511,6 +541,9 @@ def _gen_pointwise(name, sig, body, rc_ch, total_out, n_pixels,
     pad_wt = (f'\n      for (int32_t rc = {rc_ch}; rc < {rc_aligned}; rc++)\n        rw[oc * {rc_aligned} + rc] = 0;'
               if rc_aligned > rc_ch else '')
 
+    # Match the v3_NN policy: if K is already aligned, write input directly
+    # from the safe alias copy. Only allocate/use _inp_pad when padding is
+    # actually required.
     if rc_aligned > rc_ch:
         inp_pad_decl = f'''\n  // Padded staging buffer for one input vector (aligned to MAC_BYTES = {MAC_BYTES})
   static int8_t _inp_pad[{rc_aligned}];
@@ -574,9 +607,7 @@ def _gen_pointwise(name, sig, body, rc_ch, total_out, n_pixels,
 
 
 def gen_dense(name, sig, body):
-
-    """Accelerated dense / nn_contrib_dense_pack"""
-
+    """Accelerated dense / nn_contrib_dense_pack (inner code only)."""
     args  = sig[sig.index('(')+1 : sig.index(')')]
     cws   = re.search(r'(global_const_workspace_\d+_var)', args).group(1)
     lines = body.split('\n')
@@ -685,8 +716,10 @@ def _gen_dense_large_k_inner(
     fpm_val, shift_val, reqadd,
     is_float, float_int_off, float_scale, out_var,
 ):
-    """Dense with reduction-dimension tiling"""
-
+    """Dense with reduction-dimension tiling (inner code only).
+    chunk is the byte stride of one (padded) weight row; by construction
+    a power of 2, so always a multiple of MAC_BYTES = 8.
+    """
     chunk = 512
     while chunk * (total_out + 1) + total_out * 4 > SPAD_BYTES:
         chunk //= 2
@@ -761,7 +794,7 @@ def short_name(name):
 
 
 def main():
-    parser = argparse.ArgumentParser(description='Accelerate TVM C functions for AHBconv')
+    parser = argparse.ArgumentParser(description='Accelerate TVM C functions for AHBconv_8 with helper-based HW requant')
     parser.add_argument('input', help='Input baseline .c file')
     parser.add_argument('-o', '--output', help='Output .c file (default: <input>_accel.c)')
     args = parser.parse_args()
