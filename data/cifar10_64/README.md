@@ -9,6 +9,3 @@ The 10,000 CIFAR-10 test images, resized to 64x64 and stored as float32 HWC in [
 
       python make_bins.py cifar-10-python.tar.gz cifar10_64/          # bin/<class>/<class>_<rank>.bin
       python make_bins.py cifar-10-python.tar.gz cifar10_64/ --c      # also the C arrays of the demo samples
-
-The paper's FPGA runs used the first 50 images of each class (500 images); the results on all 10,000 images combine
-the exit decisions of a bit-exact host emulator of the generated C code with the measured latency of each exit path.
