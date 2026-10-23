@@ -393,7 +393,7 @@ int main(void)
     ee_thresholds[1] = 90;  /* EE2: medium    */
     ee_thresholds[2] = 80;  /* EE3: lenient   */
     write_thresholds();
-    inputs.serving_default_input_249_0 = (void *)&AIRPLANE_000;
+    inputs.serving_default_input_0 = (void *)&AIRPLANE_000;
     #endif
 
     /* Run inference */

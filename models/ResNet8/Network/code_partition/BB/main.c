@@ -409,7 +409,7 @@ int main(void)
     #else
     for (int e = 0; e < NUM_EXITS; e++) ee_thresholds[e] = 100;
     write_thresholds();
-    inputs.serving_default_input_581_0 = (void *)&AIRPLANE_000;
+    inputs.serving_default_image_0 = (void *)&AIRPLANE_000;
     #endif
 
     /* Run inference */
