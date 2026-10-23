@@ -1,9 +1,7 @@
 # Networks built for the revision
 
 These networks have the same backbones and final classifiers as the deployed models in `models/<model>/Network/`;
-only the exit layers (and therefore the exit heads) differ. They were built with the flow of the paper, run on the
-DE+A bitstream with only the memory contents changed (500 images x 9 threshold profiles), and extended to the
-10,000 test images with a bit-exact host emulator of the generated C code. Results: Section VI-F of the revised paper.
+only the exit layers (and therefore the exit heads) differ. They were built with only the memory contents changed (500 images x 9 threshold profiles), and extended to the 10,000 test images with a bit-exact host emulator of the generated C code.
 
 | Folder | Placement | Exit layers | Best-EE on DE+A (10,000 images) |
 |---|---|---|---|
