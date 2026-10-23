@@ -1,20 +1,5 @@
 """Dual-core partition of the TVM AOT C code: BB core (backbone) and EE core (exit heads).
 
-The deployed models of the paper were split by hand; this script gives the same code (checked for MobileNetV1/V2/V3-Small
-and SqueezeNet: identical up to whitespace and comments) and was used for the networks of the revision.
-
-The AOT main function calls one fused operator after another. Head ops (those that lead only to an early-exit output
-StatefulPartitionedCall_k, k >= 1) run on the EE core; all other ops run on the BB core. The tap of exit k is the
-backbone tensor that its first head op reads (a pad that copies it into the EE core's own workspace).
-
-BB core (lib1 main): after the op that writes the tap of exit k
-        while(*HANDSHAKE != 0xC0); clock_ungate_signal(); while(*HANDSHAKE != 0xCF);
-    (wait until the EE core is idle, wake it, wait until it has copied the tap); head ops are commented out.
-EE core (lib1 main): the tap pointers point into the BB core's workspace; backbone ops are commented out; per exit:
-        <first head op>  *HANDSHAKE= 0xCF;  <other head ops>  eval(<output>); *HANDSHAKE= 0xC0; clock_gate_signal();
-lib0: BB publishes its workspace addresses (BB_GLOBAL_WS_ADDR, BB_GLOBAL_CONST_WS_ADDR); EE uses the BB core's
-constant workspace. lib1 header lines as in the deployed builds (INCLUDE_ACCEL on for BB, off for EE).
-
     python split_dual_core.py <lib0.c> <lib1.c> <out dir> [--no-accel]     -> <out>/{BB,EE}/default_lib{0,1}.c
 
 <lib1.c> is the default_lib1.c of the TVM model library, after accel_codegen/tvm_accel_gen.py for configurations with
@@ -34,7 +19,7 @@ HEAD_EE = "//#define DUMP_OUTPUTS\n//#define INCLUDE_ACCEL\n#include \"config.h\
 
 
 def main_span(src):
-    i = src.index(MAIN, src.index(MAIN) + 1)          # definition (the first occurrence is the prototype)
+    i = src.index(MAIN, src.index(MAIN) + 1)
     j = src.index("\n}\n", i)
     return src.index("{", i) + 1, j
 
@@ -46,13 +31,12 @@ def parse(body):
         m = CALL.match(l)
         if m:
             args = [a.strip() for a in m.group(3).split(",")]
-            data = args[:-2]                             # last two: constant and global workspace
+            data = args[:-2]
             calls.append(dict(line=n, fn=m.group(2), ins=data[:-1], out=data[-1]))
     return lines, calls
 
 
 def partition(calls):
-    """exit index per call (0 = backbone), the tap of each exit and its producing call."""
     readers = {}
     for c in calls:
         for a in c["ins"]:
@@ -86,7 +70,7 @@ def split_lib1(src):
     exits = sorted(taps, key=lambda k: taps[k][1]["line"])
     assert exits == sorted(exits), f"exit order along the backbone {exits}"
     tap_after = {taps[k][1]["line"]: k for k in exits}
-    # BB: handshake after each tap producer, head ops commented out
+
     bb = []
     for n, l in enumerate(lines):
         c = next((x for x in calls if x["line"] == n), None)
@@ -95,7 +79,7 @@ def split_lib1(src):
         bb.append(l)
         if n in tap_after:
             bb += ["", "  while(*HANDSHAKE != 0xC0);", "  clock_ungate_signal();", "  while(*HANDSHAKE != 0xCF);", ""]
-    # EE: tap pointers into the BB workspace, backbone commented out, heads in exit order with the protocol
+
     tapsid = {taps[k][0]: k for k in exits}
     ee, heads = [], {k: [] for k in exits}
     for n, l in enumerate(lines):
