@@ -1,8 +1,7 @@
 # Firmware
 
 The firmware of each model is in `models/<model>/Network/code_partition/{BB,EE}/` (and
-`models/revision/<network>/code_partition/` for the networks of the revision). This folder holds the files it includes
-and the tools that produce it.
+`models/revision/<network>/code_partition/` for the networks of the revision).
 
 | Path | Content |
 |---|---|
