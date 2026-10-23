@@ -5,7 +5,7 @@ only the exit layers (and therefore the exit heads) differ. They were built with
 
 | Folder | Placement | Exit layers | Best-EE on DE+A (10,000 images) |
 |---|---|---|---|
-| `MobileNetV2_accuracy_aware` | Algorithm 1, accuracy-aware option | `block_6_project_BN`, `block_9_add`, `block_13_project_BN` | 224.8 ms, 79.4 % (deployed: 255.2 ms, 79.7 %) |
+| `MobileNetV2_accuracy_aware` | Algorithm 1, accuracy-aware option | `block_6_project_BN`, `block_9_add`, `block_13_project_BN` | 224.8 ms, 79.4 % |
 | `MobileNetV3Small_measured_cost` | Algorithm 1, measured layer costs + accuracy-aware option | `expanded_conv_2/project/BatchNorm`, `expanded_conv_3/project/BatchNorm`, `expanded_conv_4/Add` | 304.2 ms, 62.6 % |
 | `MobileNetV1_alpha1` | Algorithm 1 with alpha_acc = 1 (no accelerator) | `conv_dw_4_bn`, `conv_dw_9_bn` | 151.2 ms, 78.3 % |
 | `MobileNetV2_alpha1` | Algorithm 1 with alpha_acc = 1 | `block_1_project`, `block_5_project_BN`, `block_12_expand` | 265.6 ms, 78.8 % |
