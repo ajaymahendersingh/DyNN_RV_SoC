@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-FPGA Image Classifier — UART Batch Evaluation & IEEE Plot Generator
-====================================================================
+FPGA Image Classifier — UART Batch Evaluation
+=============================================
 
 Usage:
     python fpga_classifier_bench.py --port /dev/ttyUSB2 --folder ./dataset
@@ -35,7 +35,7 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 from matplotlib.ticker import MultipleLocator
 
-# ── IEEE Figure Style ─────────────────────────────────────────────────
+# ── Figure Style ─────────────────────────────────────────────────
 plt.rcParams.update({
     "font.family": "serif",
     "font.serif": ["Times New Roman", "Times", "DejaVu Serif"],
