@@ -1,16 +1,16 @@
-"""Algorithm 1 of the paper (hardware-aware refinement of exit placements), shared by the three notebooks.
+"""Hardware-aware refinement of exit placements
 
-Depth-based selection (lines 1-16 and 18 of Algorithm 1):
+Depth-based selection:
   - every backbone layer i gets a cost m_i = ALPHA_ACC * (accelerator-eligible MACs) + (other MACs), or, if the network
-    has been profiled on the target, its measured cost (line 1);
+    has been profiled on the target, its measured cost;
   - candidate exits are the layers with a 4-D output; if at least 2 * N_max of them are architectural boundaries,
-    only the boundaries are kept (the boundary rule of each notebook is a parameter, see `candidates`);
+    only the boundaries are kept;
   - for N = N_max down to N_min, every ordered tuple of N candidates is checked: first exit past D_min, last exit
     in [D_L,min, D_L,max], every exit head cheaper than the backbone segment that follows it (the head runs on the
     EE core, without accelerator); among the feasible tuples, the one with the lowest (phi, psi) is selected,
     phi = |d_N - D_tar| - lambda * min(S) / max(S), psi = total head cost.
 
-Accuracy-aware option (line 17), when a validation set is available: for every feasible tuple of the first N that
+Accuracy-aware option, when a validation set is available: for every feasible tuple of the first N that
 admits any, early exiting is simulated on the validation images for the nine threshold profiles (an image leaves at
 the first exit whose confidence reaches the threshold and costs the backbone up to that exit plus the head;
 otherwise it costs the whole backbone). The tuple with the lowest mean cost per image at an accuracy Delta below the
@@ -23,7 +23,7 @@ import json
 
 import numpy as np
 
-# Threshold profiles of the paper (confidence thresholds in % for exits 1, 2, 3); the first one takes no exit.
+# Threshold profiles (confidence thresholds in % for exits 1, 2, 3); the first one takes no exit.
 PROFILES = [(100, 100, 100), (95, 90, 85), (95, 85, 75), (90, 85, 80), (90, 80, 70), (85, 75, 65), (80, 70, 60),
             (70, 60, 50), (50, 40, 25)]
 
