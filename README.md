@@ -2,8 +2,6 @@
 
 A dual-core RISC-V SoC with a lightweight INT8 dot-product accelerator and an end-to-end model-to-FPGA pipeline for **early-exit (dynamic) convolutional neural networks**. Prototyped on AMD ZCU102.
 
-Paper: *DyNN-RV: An End-to-End Hardware–Software Co-Design Framework for Dynamic Neural Network Inference on RISC-V SoC* (under review). Tag `v1.0-submission` is the version submitted with the paper; tag `v2.0-revision` adds the files of the revision.
-
 ---
 
 ## What is, and is not, in this repository
