@@ -38,8 +38,8 @@ DyNN-RV-SoC/
 │   ├── model_to_multi_exit_C.ipynb
 │   ├── model_to_multi_exit_C__resnet8.ipynb
 │   ├── model_to_multi_exit_C__squeezenet.ipynb
-│   ├── dynn_placement.py      Algorithm 1 (exit placement), used by the notebooks
-│   └── measured_costs/        measured layer costs of the five networks on DE+A
+│   ├── dynn_placement.py
+│   └── measured_costs/
 ├── accel_codegen/
 │   ├── tvm_accel_gen.py
 │   ├── conv_accel.h
@@ -93,7 +93,7 @@ The output of this notebook would be a tar file containing the C collaterals.
 ### Build the binary
 
 The generated C sources from the previous step are split between the BB and EE cores with `firmware/split/make_code_partition.py` (see `firmware/README.md`), which also runs the accelerator code generation. The resulting `default_lib0.c`, `default_lib1.c` and `main.c` of each core are compiled in a Synopsys ASIP Designer project (see models/ folder for examples); the headers they include are in firmware/common/.
-To offload some compute to the provided convolution accelerator, use the python script from accel_codegen/ folder (the default answers give the code of the paper).
+To offload some compute to the provided convolution accelerator, use the python script from accel_codegen/ folder.
 The output of this step will be a hex of the C code (with or w/o the accelerator intrinsics) that can be used to either download to the processor memory via JTAG or can be directly embedded in the BRAM before generating the bitstream (convert hex to .coe with firmware/mem_tools/)
 
 ### FPGA build
