@@ -10,7 +10,7 @@ The RISC-V cores in the SoC are instances of Synopsys `trv32p3` (ASIP Designer);
 
 ### Included
 
-- `software/` — Python toolflow: backbone preparation, exit placement (Algorithm 1 of the paper, `dynn_placement.py`, with the accuracy-aware and measured-cost options), exit-head insertion, training, INT8 post-training quantization (TFLite), and TVM-based bare-metal C generation.
+- `software/` — Python toolflow: backbone preparation, exit placement, exit-head insertion, training, INT8 post-training quantization (TFLite), and TVM-based bare-metal C generation.
 - `accel_codegen/` — Script that rewrites the generated C code so that pointwise convolutions and dense layers, including their requantization, run on the accelerator.
 - `rtl/conv_accel/` — Synthesizable Verilog for the AHBconv dot-product accelerator (AHB-Lite slave, dual-clock scratchpad, INT8 SIMD MAC, per-channel requantization).
 - `rtl/peripherals/` — AHB-UART, AHB-timer.
@@ -18,8 +18,8 @@ The RISC-V cores in the SoC are instances of Synopsys `trv32p3` (ASIP Designer);
 - `fpga/` — Vivado constraints, and build instructions for ZCU102.
 - `firmware/` — Headers included by the generated firmware, the automated BB/EE split of the generated C code (`firmware/split/`), and tools that convert compiled images to Vivado `.coe` files.
 - `models/` — The five deployed multi-exit models: INT8 and FP32 `.tflite`, TVM model library, and the generated C sources of the two cores. `models/revision/` holds the networks built for the revision.
-- `data/cifar10_64/` — Specification and sha256 manifest of the 10,000 test images streamed to the FPGA, and a script that rebuilds them from CIFAR-10.
-- `scripts/` — `bench/`: the script that ran all FPGA measurements of the paper; `demo/`: streaming images to the FPGA over UART and generating a PPT of the classification results.
+- `data/cifar10_64/` — Specification of the 10,000 test images streamed to the FPGA, and a script that rebuilds them from CIFAR-10.
+- `scripts/` — `bench/`: the script that ran all FPGA measurements; `demo/`: streaming images to the FPGA over UART and generating a PPT of the classification results.
 
 ### Excluded
 
