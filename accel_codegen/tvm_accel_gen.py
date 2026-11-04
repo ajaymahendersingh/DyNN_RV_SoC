@@ -99,8 +99,10 @@ def classify(name, body, sig=''):
         if 'nn_conv2d' in name:
             return 'SPATIAL_3x3'
     if 'nn_conv2d' in name:
-        # Exclude fused residual+conv functions (two int8_t* inputs: p0 and p1)
-        if 'int8_t* p1' in sig:
+        # Exclude fused residual+conv functions. The residual operand is p1 whatever its C type: TVM emits
+        # `int8_t* p1` when the skip tensor is already requantized and `int32_t* p1` when it is still an accumulator
+        # (ResNet8 shortcut convolutions); the pointwise code below would drop the residual add.
+        if re.search(r'\bp1\s*\[', body) or re.search(r'\*\s*p1\b', sig):
             return 'FUSED_RESIDUAL'
         # Batched pointwise: has ff loop over output channels
         if 'for (int32_t rc' in body and 'for (int32_t ff' in body:
