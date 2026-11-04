@@ -19,6 +19,7 @@ The RISC-V cores in the SoC are instances of Synopsys `trv32p3` (ASIP Designer);
 - `firmware/` — Headers included by the generated firmware, the automated BB/EE split of the generated C code (`firmware/split/`), and tools that convert compiled images to Vivado `.coe` files.
 - `models/` — The five deployed multi-exit models: INT8 and FP32 `.tflite`, TVM model library, and the generated C sources of the two cores. `models/revision/` holds the networks built for the revision.
 - `data/cifar10_64/` — Specification of the 10,000 test images streamed to the FPGA, and a script that rebuilds them from CIFAR-10.
+- `cifar100/` — The same flow for CIFAR-100: notebooks, the five networks trained on CIFAR-100, and the specification of the test images (see `cifar100/README.md`).
 - `scripts/` — `bench/`: the script that ran all FPGA measurements; `demo/`: streaming images to the FPGA over UART and generating a PPT of the classification results.
 
 ### Excluded
@@ -64,6 +65,10 @@ DyNN-RV-SoC/
 │   │   └── Network/ *_int8.tflite, *_fp32.tflite, *_EE_int8_aot.tar, code_partition/{BB,EE}
 │   └── revision/
 ├── data/cifar10_64/
+├── cifar100/
+│   ├── software/    the three notebooks for CIFAR-100
+│   ├── models/      the five networks trained on CIFAR-100
+│   └── data/cifar100_64/
 └── scripts/
     ├── bench/
     └── demo/
@@ -115,7 +120,7 @@ MIT (see `LICENSE`). The Synopsys `trv32p3` processor models and tools needed to
 ## Limitations of this release
 
 - Weights and activations fit entirely in on-chip BRAM. There is no DDR controller in the released SoC.
-- The deployed models are trained on CIFAR-10. CIFAR-100 versions of the three MobileNets were evaluated for the revision with the host emulator only.
+- The deployed models are trained on CIFAR-10. The CIFAR-100 versions in `cifar100/` use the same hardware and flow, with wider exit heads.
 - The accelerator covers 1×1 pointwise and dense layers only. 3×3 / depthwise convolutions execute in software.
 - The cycle-accurate measurements correspond to the `trv32p3` microarchitecture; substituting a different RV32IM core will produce different latencies.
 

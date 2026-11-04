@@ -5,3 +5,5 @@ work/
 # rebuilt by data/cifar10_64/make_bins.py
 data/cifar10_64/bin/
 data/cifar10_64/c/
+# rebuilt by cifar100/data/cifar100_64/make_bins.py
+cifar100/data/cifar100_64/bin/
