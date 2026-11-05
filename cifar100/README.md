@@ -23,8 +23,7 @@ The CIFAR-100 heads are wider. The second convolution uses a 1×1 kernel, which 
 Training. MobileNets and SqueezeNet: random horizontal flips and shifts of the training images, 30 epochs with a
 cosine decay of the learning rate, and the epoch with the best validation result is kept (CIFAR-10: 10 epochs
 without these additions). ResNet-8: the backbone is trained as for CIFAR-10; the exit heads are trained for 30 epochs
-with the cosine decay and the best epoch. SqueezeNet uses a learning rate of 2e-4 instead of 5e-4: it has no batch
-normalization, and with 5e-4 its training did not always start.
+with the cosine decay and the best epoch.
 
 Firmware. The class number in the early-exit flag goes up to 99. The EE core passes only the top-1 class and its
 score to the BB core, because the shared memory region for the scores holds ten values.
