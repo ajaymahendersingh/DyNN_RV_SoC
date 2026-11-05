@@ -1,35 +1,6 @@
 #!/usr/bin/env python3
 """
-tvm_accel_gen.py (v4) — Targets AHBconv_8 hardware (v7 + on-chip requant).
-
-Differences vs v3:
-  - For pointwise 1x1 conv layers with simple INT8 clip post-processing
-    (i.e., NOT fused h-swish, NOT float output), generate code that:
-      * Packs per-OC requant params (bias, scale, shift) into scratchpad.
-      * Sets PARAM_OFFSET (0x1C), OUTPUT_ZP (0x20), CTRL = 3 (start | requant_en).
-      * After done, reads packed INT8 outputs at 1-byte stride.
-    This eliminates the per-OC software requantization loop, which was
-    ~80% of accelerated-layer time in v7.
-  - Layers with fused h-swish, float output, or dense pack: fall back
-    to the v7 path (CTRL = 1, INT32 outputs, software requantization).
-    These are NOT covered by HW requant in this version.
-  - SPAD_BYTES = 12288 unchanged from v3.
-
-PARAMETER BLOCK LAYOUT (per output channel, 16 bytes):
-  word 0 [63:32] = scale[oc]   (INT32 = quant_scale[oc])
-  word 0 [31:0]  = bias[oc]    (INT32 = conv_sub[oc] - conv_const[oc] for
-                                pointwise pattern A; or conv_const[oc] for
-                                pointwise pattern B)
-  word 1 [63:32] = reserved (zero)
-  word 1 [31:0]  = shift[oc]   (INT32 = quant_shift[oc] + 31)
-
-OUTPUT_ZP register: scalar INT32 added after shift, then clipped to INT8.
-                    Extracted from the layer's "+ 31)))) <sign> N" pattern.
-
-Usage: same as v3.
-
-Generated C expects conv_accel.h to provide the v8 helper functions
-used by _gen_pointwise_v8 (see conv_accel_v8.h produced with this patch).
+tvm_accel_gen.py — Targets AHBconv accelerator.
 """
 
 import re
@@ -40,12 +11,8 @@ import textwrap
 # ============================================================
 #  Constants
 # ============================================================
-SPAD_BYTES = 12288      # full v7 BRAM capacity (1536 x 64-bit = 12 KB),
-                        # all bus-reachable now that AHBDCD claims
-                        # 0x40002000-0x40005FFF (16 KB window).
-MAC_BYTES  = 8          # AHBconv_7 inner-loop word width (8 multipliers,
-                        # 64-bit BRAM scratchpad). All scratchpad-resident
-                        # vectors must be padded to multiples of MAC_BYTES.
+SPAD_BYTES = 12288      # 0x40002000-0x40005FFF (16 KB window).
+MAC_BYTES  = 8          # AHBconv inner-loop word width (8 multipliers, 64-bit BRAM scratchpad).
 
 def _align(n, m=MAC_BYTES):
     """Round n up to the next multiple of m."""
@@ -238,11 +205,11 @@ def _reqadd_to_int(reqadd):
 
 
 def compute_tile_size(in_ch, total_out):
-    # Reduction length must be aligned to MAC_BYTES (8) for AHBconv_7.
+    # Reduction length must be aligned to MAC_BYTES (8) for AHBconv.
     # Each output is 4 bytes (INT32 result).
     k_aligned = _align(in_ch)
     max_tile = (SPAD_BYTES - k_aligned) // (k_aligned + 4)
-    # Candidates ordered largest-first. Larger sizes added (vs v2) to
+    # Candidates ordered largest-first. Larger sizes added to
     # exploit the 12 KB SPAD; otherwise layers like 72->432 stayed
     # capped at tile=64 even though tile=144 fits.
     candidates = [total_out, 256, 192, 128, 96, 64, 32, 16, 8, 4]
@@ -253,7 +220,7 @@ def compute_tile_size(in_ch, total_out):
 
 
 def compute_tile_size_v8(in_ch, total_out):
-    """Tile size for v8 hardware-requant pointwise. Per-OC scratchpad
+    """Tile size for hardware-requant pointwise. Per-OC scratchpad
     cost = rc_aligned (weight) + 16 (param block) + 4 (worst-case INT32
     output area, overwritten with packed INT8 later). Plus rc_aligned
     for the input vector.
@@ -268,7 +235,7 @@ def compute_tile_size_v8(in_ch, total_out):
 
 
 # ============================================================
-#  Code generators — NOW RETURN ONLY THE INNER BODY
+#  Code generators
 # ============================================================
 
 def gen_pointwise(name, sig, body):
